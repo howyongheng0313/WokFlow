@@ -46,6 +46,23 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+
+      /* Lenis recommended settings */
+      html.lenis, html.lenis body {
+        height: auto;
+      }
+      .lenis.lenis-smooth {
+        scroll-behavior: auto !important;
+      }
+      .lenis.lenis-smooth [data-lenis-prevent] {
+        overscroll-behavior: contain;
+      }
+      .lenis.lenis-stopped {
+        overflow: hidden;
+      }
+      .lenis.lenis-scrolling iframe {
+        pointer-events: none;
+      }
     </style>
 
 <link rel="stylesheet" href="/index.css">
@@ -59,7 +76,7 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/assets/index-C6U3rSp2.js"></script>
+  <script type="module" crossorigin src="/assets/index-Di4BVKK-.js"></script>
 </head>
   <body>
     <!-- Decorative Ambient Glows -->

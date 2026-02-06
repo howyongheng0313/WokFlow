@@ -9,6 +9,25 @@ import ClickSpark from './components/ClickSpark';
 import AboutView from './components/AboutView';
 import { ViewState, UserRole } from './types';
 import {
+    INITIAL_USERS,
+    INITIAL_COURSES,
+    INITIAL_ENROLLMENTS,
+    INITIAL_COMMENTS,
+    INITIAL_SHARER_REGISTRATIONS,
+    INITIAL_SHARER_REQUESTS,
+    INITIAL_REPORTED_CONTENT,
+    INITIAL_PLATFORM_ANALYTICS,
+    INITIAL_CHAPTERS,
+    INITIAL_CHAPTER_PROGRESS,
+    MONTH_NAMES as IMPORTED_MONTH_NAMES,
+    UserStatus,
+    CourseStatus,
+    getCuisineStatistics,
+    getUserRoleStatistics,
+    getRegistrationTrendData,
+    type UserChapterProgress
+} from './data/database';
+import {
     LayoutDashboard,
     BookOpen,
     Users,
@@ -72,42 +91,41 @@ import {
 
 // --- CONSTANTS ---
 
-const MONTH_NAMES = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-];
+const MONTH_NAMES = IMPORTED_MONTH_NAMES;
 
-const INITIAL_ALL_COURSES = [
-    { id: 1, title: "Fried Rice", cuisine: "Chinese", image: null },
-    { id: 2, title: "Kong Po", cuisine: "Chinese", image: null },
-    { id: 3, title: "Spaghetti", cuisine: "Western", image: null },
-    { id: 4, title: "Sandwich", cuisine: "Western", image: null },
-    { id: 5, title: "Katsu Curry", cuisine: "Japanese", image: null },
-    { id: 6, title: "Bibimbap", cuisine: "Korean", image: null }
-];
+// 将数据库课程格式转换为应用所需格式(只包含活跃课程)
+const INITIAL_ALL_COURSES = INITIAL_COURSES
+    .filter(course => course.status === CourseStatus.ACTIVE)  // 只显示活跃课程
+    .map(course => ({
+        id: course.course_id,
+        title: course.title,
+        description: course.description,  // 添加课程描述
+        cuisine: course.cuisine_id === 1 ? 'Chinese' :
+            course.cuisine_id === 2 ? 'Western' :
+                course.cuisine_id === 3 ? 'Japanese' : 'Korean',
+        image: course.image_url,
+        difficulty: course.difficulty,  // 添加难度字段用于筛选和显示
+        duration: course.duration,  // 添加时长字段用于显示
+        created_date: course.created_date  // 添加创建日期字段用于时间筛选
+    }));
 
-const INITIAL_ENROLLED_COURSES = Array.from({ length: 8 }, (_, i) => ({
-    id: i + 1,
-    title: `Cuisine ${i + 1} `,
-    date: '03-13-2026',
-    progress: 60,
-    status: 'In Progress'
+// 将数据库注册格式转换为应用所需格式
+const INITIAL_ENROLLED_COURSES = INITIAL_ENROLLMENTS.map(enrollment => ({
+    id: enrollment.enrollment_id,
+    userId: enrollment.user_id, // 添加 userId
+    title: INITIAL_COURSES.find(c => c.course_id === enrollment.course_id)?.title || `Course ${enrollment.course_id}`,
+    date: enrollment.enrollment_date,
+    progress: enrollment.progress,
+    status: enrollment.status
 }));
 
-const INITIAL_CREATED_COURSES = [
-    { id: 1, title: "Courses 1", date: "03-13-2026", status: "Active" },
-    { id: 2, title: "Courses 2", date: "03-13-2026", status: "Deleted" },
-    { id: 3, title: "Courses 3", date: "03-13-2026", status: "Active" },
-    { id: 4, title: "Courses 4", date: "03-13-2026", status: "Deleted" },
-    { id: 5, title: "Courses 5", date: "03-13-2026", status: "Active" },
-    { id: 6, title: "Courses 6", date: "03-13-2026", status: "Active" }
-];
-
-const INITIAL_COMMENTS = [
-    { id: 1, user: 'Learner A', text: "Great tutorial! Really helped me understand the basics.", rating: 5 },
-    { id: 2, user: 'Learner B', text: "The pacing was a bit fast, but very informative.", rating: 4 }
-];
-
+// 创建的课程列表(从课程表中筛选)
+const INITIAL_CREATED_COURSES = INITIAL_COURSES.map(course => ({
+    id: course.course_id,
+    title: course.title,
+    date: course.created_date,
+    status: course.status
+}));
 
 const SECTION_SCORES = Array.from({ length: 8 }, (_, i) => ({
     id: i + 1,
@@ -117,58 +135,63 @@ const SECTION_SCORES = Array.from({ length: 8 }, (_, i) => ({
     status: i === 1 ? 'Failed' : 'Passed'
 }));
 
-// --- ADMIN MOCK DATA ---
-const INITIAL_SHARER_REGISTRATIONS = [
-    { id: 1, username: "Learner 1", requestDate: "03-13-2026", proof: "Learner1.pdf", status: "Pending" },
-    { id: 2, username: "Learner 2", requestDate: "03-13-2026", proof: "Learner2.pdf", status: "Accepted" },
-    { id: 3, username: "Learner 3", requestDate: "03-13-2026", proof: "Learner3.pdf", status: "Rejected" },
-    { id: 4, username: "Learner 4", requestDate: "03-13-2026", proof: "Learner4.pdf", status: "Pending" },
-];
+// 将数据库用户格式转换为应用所需格式
+const INITIAL_USER_CONTROL_DATA = INITIAL_USERS.map(user => ({
+    id: user.user_id,
+    username: user.username,
+    role: user.role === 'LEARNER' ? 'Learner' :
+        user.role === 'SHARER' ? 'Sharer' :
+            user.role === 'ADMIN' ? 'Admin' : 'Guest',
+    joinedDate: user.joined_date,
+    status: user.status
+}));
 
-const INITIAL_SHARER_REQUESTS = [
-    { id: 1, username: "Learner 5", requestDate: "03-13-2026", status: "Pending" },
-    { id: 2, username: "Learner 6", requestDate: "03-13-2026", status: "Accepted" },
-    { id: 3, username: "Learner 7", requestDate: "03-13-2026", status: "Rejected" },
-    { id: 4, username: "Learner 8", requestDate: "03-13-2026", status: "Pending" },
-];
+// 将数据库举报内容格式转换为应用所需格式
+const INITIAL_REPORTED_CONTENT_DATA = INITIAL_REPORTED_CONTENT.map(report => ({
+    id: report.report_id,
+    course: INITIAL_COURSES.find(c => c.course_id === report.course_id)?.title || `Course ${report.course_id}`,
+    reporter: INITIAL_USERS.find(u => u.user_id === report.reporter_id)?.username || `User ${report.reporter_id}`,
+    reason: report.reason,
+    date: report.report_date,
+    status: report.status
+}));
 
-const INITIAL_USER_CONTROL_DATA = [
-    { id: 1, username: "Learner 1", role: "Learner", joinedDate: "03-13-2026", status: "Active" },
-    { id: 2, username: "Learner 2", role: "Sharer", joinedDate: "03-13-2026", status: "Banned" },
-    { id: 3, username: "Learner 3", role: "Learner", joinedDate: "03-13-2026", status: "Active" },
-    { id: 4, username: "Learner 4", role: "Sharer", joinedDate: "03-13-2026", status: "Banned" },
-    { id: 5, username: "Learner 5", role: "Learner", joinedDate: "03-13-2026", status: "Active" },
-    { id: 6, username: "Learner 6", role: "Sharer", joinedDate: "03-13-2026", status: "Active" },
-    { id: 7, username: "Learner 7", role: "Learner", joinedDate: "03-13-2026", status: "Active" },
-    { id: 8, username: "Learner 8", role: "Learner", joinedDate: "03-13-2026", status: "Active" },
-];
+// 将数据库分享者注册格式转换为应用所需格式
+const INITIAL_SHARER_REGISTRATIONS_DATA = INITIAL_SHARER_REGISTRATIONS.map(reg => ({
+    id: reg.registration_id,
+    username: INITIAL_USERS.find(u => u.user_id === reg.user_id)?.username || `User ${reg.user_id}`,
+    requestDate: reg.request_date,
+    status: reg.status
+}));
 
-const INITIAL_REPORTED_CONTENT_DATA = [
-    { id: 1, course: "Courses 1", reporter: "Reporter 1", reason: "Reason 1", date: "03-13-2026", status: "Pending" },
-    { id: 2, course: "Courses 2", reporter: "Reporter 2", reason: "Reason 2", date: "03-13-2026", status: "Ignored" },
-    { id: 3, course: "Courses 3", reporter: "Reporter 3", reason: "Reason 3", date: "03-13-2026", status: "Ignored" },
-    { id: 4, course: "Courses 4", reporter: "Reporter 4", reason: "Reason 4", date: "03-13-2026", status: "Ignored" },
-    { id: 5, course: "Courses 5", reporter: "Reporter 5", reason: "Reason 5", date: "03-13-2026", status: "Banned" },
-    { id: 6, course: "Courses 6", reporter: "Reporter 6", reason: "Reason 6", date: "03-13-2026", status: "Banned" },
-    { id: 7, course: "Courses 7", reporter: "Reporter 7", reason: "Reason 7", date: "03-13-2026", status: "Banned" },
-];
+// 将数据库分享者请求格式转换为应用所需格式
+const INITIAL_SHARER_REQUESTS_DATA = INITIAL_SHARER_REQUESTS.map(req => ({
+    id: req.request_id,
+    username: INITIAL_USERS.find(u => u.user_id === req.user_id)?.username || `User ${req.user_id}`,
+    requestDate: req.request_date,
+    status: req.status
+}));
 
-const REGISTRATION_TREND_DATA = [20, 22, 18, 30, 42, 15, 55, 65, 95, 100, 102, 105];
+// 注册趋势数据
+const REGISTRATION_TREND_DATA = getRegistrationTrendData();
 
-const CUISINE_CATEGORY_DATA = [
-    { label: 'CHINESE', value: 650 },
-    { label: 'WESTERN', value: 1020 },
-    { label: 'JAPANESE', value: 870 },
-    { label: 'KOREAN', value: 870 },
-];
+// 菜系分类数据
+const CUISINE_CATEGORY_DATA = getCuisineStatistics();
 
-const USER_ROLE_DATA = [
-    { label: 'Learner', value: 1800, color: '#FF8C66' },
-    { label: 'Sharer', value: 1100, color: '#FFB399' },
-    { label: 'Admin', value: 800, color: '#FCD5CE' },
-];
+// 用户角色数据
+const USER_ROLE_DATA = getUserRoleStatistics();
+
 
 // --- SHARED COMPONENTS ---
+
+interface Enrollment {
+    id: number;
+    userId: number; // 添加 userId
+    title: string;
+    date: string;
+    progress: number;
+    status: string;
+}
 
 interface ViewProps {
     setCurrentView: (view: ViewState) => void;
@@ -478,7 +501,7 @@ const SharerRegistrationView: React.FC<SharerRegistrationProps> = ({
                             placeholder="Search username..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-12 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
+                            className="w-full h-10 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
                         />
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     </div>
@@ -488,7 +511,7 @@ const SharerRegistrationView: React.FC<SharerRegistrationProps> = ({
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                             >
                                 <option value="All">All Status</option>
                                 <option value="Pending">Pending</option>
@@ -503,7 +526,7 @@ const SharerRegistrationView: React.FC<SharerRegistrationProps> = ({
                                     setStatusFilter('All');
                                     setSearchQuery('');
                                 }}
-                                className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                             >
                                 <RotateCcw size={16} />
                                 Reset
@@ -634,7 +657,7 @@ const SharerRequestView: React.FC<SharerRequestProps> = ({
                             placeholder="Search username..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-12 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
+                            className="w-full h-10 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
                         />
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     </div>
@@ -644,7 +667,7 @@ const SharerRequestView: React.FC<SharerRequestProps> = ({
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                             >
                                 <option value="All">All Status</option>
                                 <option value="Pending">Pending</option>
@@ -659,7 +682,7 @@ const SharerRequestView: React.FC<SharerRequestProps> = ({
                                     setStatusFilter('All');
                                     setSearchQuery('');
                                 }}
-                                className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                             >
                                 <RotateCcw size={16} />
                                 Reset
@@ -837,7 +860,7 @@ const AdminUserManagementView: React.FC<AdminUserManagementProps> = ({
                                 placeholder="Search username..."
                                 value={userSearchQuery}
                                 onChange={(e) => setUserSearchQuery(e.target.value)}
-                                className="w-full h-12 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
+                                className="w-full h-10 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
                             />
                             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                         </div>
@@ -846,7 +869,7 @@ const AdminUserManagementView: React.FC<AdminUserManagementProps> = ({
                             <select
                                 value={userRoleFilter}
                                 onChange={(e) => setUserRoleFilter(e.target.value)}
-                                className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                             >
                                 <option value="" disabled>Role</option>
                                 <option value="Learner">Learner</option>
@@ -859,7 +882,7 @@ const AdminUserManagementView: React.FC<AdminUserManagementProps> = ({
                             <select
                                 value={userStatusFilter}
                                 onChange={(e) => setUserStatusFilter(e.target.value)}
-                                className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                             >
                                 <option value="" disabled>Status</option>
                                 <option value="Active">Active</option>
@@ -875,7 +898,7 @@ const AdminUserManagementView: React.FC<AdminUserManagementProps> = ({
                                     setUserRoleFilter("");
                                     setUserStatusFilter("");
                                 }}
-                                className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                             >
                                 <RotateCcw size={16} />
                                 Reset
@@ -993,7 +1016,7 @@ const AdminContentManagementView: React.FC<AdminContentManagementProps> = ({
                             placeholder="Search course or reporter..."
                             value={reportedSearchQuery}
                             onChange={(e) => setReportedSearchQuery(e.target.value)}
-                            className="w-full h-12 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
+                            className="w-full h-10 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
                         />
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     </div>
@@ -1003,7 +1026,7 @@ const AdminContentManagementView: React.FC<AdminContentManagementProps> = ({
                             <select
                                 value={reportedStatusFilter}
                                 onChange={(e) => setReportedStatusFilter(e.target.value)}
-                                className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                             >
                                 <option value="" disabled>Status</option>
                                 <option value="Pending">Pending</option>
@@ -1019,7 +1042,7 @@ const AdminContentManagementView: React.FC<AdminContentManagementProps> = ({
                                     setReportedSearchQuery("");
                                     setReportedStatusFilter("");
                                 }}
-                                className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                             >
                                 <RotateCcw size={16} />
                                 Reset
@@ -1736,7 +1759,7 @@ const AnalyticsView: React.FC<AuthenticatedViewProps & { myCoursesSubpage?: stri
                                 <select
                                     value={quizCuisineFilter}
                                     onChange={(e) => setQuizCuisineFilter(e.target.value)}
-                                    className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                    className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                                 >
                                     <option value="All" disabled>All Cuisine</option>
                                     <option value="Chinese">Chinese</option>
@@ -1752,7 +1775,7 @@ const AnalyticsView: React.FC<AuthenticatedViewProps & { myCoursesSubpage?: stri
                                 <select
                                     value={quizSectionFilter}
                                     onChange={(e) => setQuizSectionFilter(e.target.value)}
-                                    className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                    className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                                 >
                                     <option value="All" disabled>All Sections</option>
                                     <option value="Section 1">Section 1</option>
@@ -1767,7 +1790,7 @@ const AnalyticsView: React.FC<AuthenticatedViewProps & { myCoursesSubpage?: stri
                                 <select
                                     value={quizStatusFilter}
                                     onChange={(e) => setQuizStatusFilter(e.target.value)}
-                                    className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                    className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                                 >
                                     <option value="All" disabled>All Status</option>
                                     <option value="Passed">Passed</option>
@@ -1784,7 +1807,7 @@ const AnalyticsView: React.FC<AuthenticatedViewProps & { myCoursesSubpage?: stri
                                         setQuizSectionFilter('All');
                                         setQuizStatusFilter('All');
                                     }}
-                                    className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                    className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                 >
                                     <RotateCcw size={16} />
                                     Reset
@@ -1845,7 +1868,7 @@ const AnalyticsView: React.FC<AuthenticatedViewProps & { myCoursesSubpage?: stri
                                 <select
                                     value={commentCourseFilter}
                                     onChange={(e) => setCommentCourseFilter(e.target.value)}
-                                    className="w-full h-12 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
+                                    className="w-full h-10 pl-4 pr-10 bg-white/60 backdrop-blur-md border border-white/60 rounded-xl appearance-none text-gray-700 font-medium hover:border-[#FF8C66] text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 cursor-pointer shadow-sm"
                                 >
                                     <option value="All" disabled>All Courses</option>
                                     <option value="Course 1">Course 1</option>
@@ -1863,7 +1886,7 @@ const AnalyticsView: React.FC<AuthenticatedViewProps & { myCoursesSubpage?: stri
                             {commentCourseFilter !== 'All' && (
                                 <button
                                     onClick={() => setCommentCourseFilter('All')}
-                                    className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                    className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                 >
                                     <RotateCcw size={16} />
                                     Reset
@@ -3082,6 +3105,9 @@ interface CourseDetailProps extends AuthenticatedViewProps {
     selectedCourse: any;
     comments: typeof INITIAL_COMMENTS;
     onAddComment: (comment: any) => void;
+    isChapterUnlocked?: (chapterId: number, courseId: number) => boolean;
+    handleCompleteChapter?: (chapterId: number, courseId: number) => void;
+    chapterProgress?: any[];
 }
 
 const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string; setMyCoursesSubpage?: (subpage: string) => void }> = ({
@@ -3091,13 +3117,17 @@ const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string
     comments,
     onAddComment,
     myCoursesSubpage,
-    setMyCoursesSubpage
+    setMyCoursesSubpage,
+    isChapterUnlocked,
+    handleCompleteChapter,
+    chapterProgress
 }) => {
     const [commentText, setCommentText] = useState('');
     const [isFollowing, setIsFollowing] = useState(false);
     const [userRating, setUserRating] = useState(0);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [reportReason, setReportReason] = useState('');
+    const [videoCompleted, setVideoCompleted] = useState(false);
 
     // Quiz states
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -3215,8 +3245,37 @@ const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string
         setShowResult(!showResult);
     };
 
-    const [currentStep, setCurrentStep] = useState(3);
-    const unlockedStep = 3;
+    // 获取当前课程的章节
+    const courseChapters = INITIAL_CHAPTERS
+        .filter(ch => ch.course_id === selectedCourse?.id)
+        .sort((a, b) => a.chapter_order - b.chapter_order);
+
+    const [currentStep, setCurrentStep] = useState(1);
+
+    // 获取当前章节
+    const currentChapter = courseChapters[currentStep - 1] || courseChapters[0];
+
+    // 视频引用
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    // 视频播放完成处理
+    const handleVideoEnded = () => {
+        if (currentChapter && handleCompleteChapter) {
+            console.log('Video completed! Unlocking next chapter...');
+            setVideoCompleted(true);
+            handleCompleteChapter(currentChapter.chapter_id, selectedCourse?.id);
+        }
+    };
+
+    // 章节切换时重置状态
+    useEffect(() => {
+        setVideoCompleted(false);
+        // 重置视频到开始位置
+        if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+            videoRef.current.load(); // 重新加载视频
+        }
+    }, [currentStep]);
 
     return (
         <div className="min-h-screen flex flex-col font-sans">
@@ -3224,23 +3283,26 @@ const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string
 
             <main className="flex-1 w-full max-w-[1400px] mx-auto px-6 md:px-12 pb-20 mt-6">
 
-                {/* Stepper */}
+                {/* Stepper - 动态章节进度条 */}
                 <div className="flex justify-center items-center gap-2 md:gap-4 mb-10">
-                    {[1, 2, 3, 4].map((step, index) => {
-                        const isUnlocked = step <= unlockedStep;
+                    {courseChapters.map((chapter, index) => {
+                        const step = index + 1;
+                        const isUnlocked = isChapterUnlocked ? isChapterUnlocked(chapter.chapter_id, selectedCourse?.id) : false;
                         const isActive = step === currentStep;
-                        const isCompleted = step < currentStep;
+                        const chapterProgressItem = chapterProgress?.find(p => p.chapter_id === chapter.chapter_id);
+                        const isCompleted = chapterProgressItem?.is_completed || false;
 
                         return (
-                            <React.Fragment key={step}>
+                            <React.Fragment key={chapter.chapter_id}>
                                 {index > 0 && (
-                                    <div className={`w-12 md: w-24 h-0.5 transition-colors duration-300 ${step <= currentStep ? 'bg-[#FF8C66]' : 'bg-gray-200'} `}></div>
+                                    <div className={`w-12 md:w-24 h-0.5 transition-colors duration-300 ${isCompleted || isActive ? 'bg-[#FF8C66]' : 'bg-gray-200'}`}></div>
                                 )}
                                 <button
                                     onClick={() => isUnlocked && setCurrentStep(step)}
                                     disabled={!isUnlocked}
+                                    title={chapter.title}
                                     className={`
-w-10 h-10 md: w-12 md: h-12 rounded-full flex items-center justify-center text-lg font-bold transition-all border-2 shrink-0
+w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg font-bold transition-all border-2 shrink-0
                                         ${isActive
                                             ? 'bg-gradient-to-r from-[#FF8C66] to-[#FF6B4A] border-[#FF8C66] text-white shadow-lg shadow-orange-500/30 scale-110 z-10'
                                             : isUnlocked
@@ -3251,7 +3313,7 @@ w-10 h-10 md: w-12 md: h-12 rounded-full flex items-center justify-center text-l
                                         }
 `}
                                 >
-                                    {isCompleted ? <Check size={20} strokeWidth={3} /> : step}
+                                    {isCompleted ? <Check size={20} strokeWidth={3} /> : isUnlocked ? step : '🔒'}
                                 </button>
                             </React.Fragment>
                         );
@@ -3263,14 +3325,16 @@ w-10 h-10 md: w-12 md: h-12 rounded-full flex items-center justify-center text-l
                     <div className="lg:col-span-8 space-y-8">
                         {/* Video Player */}
                         <div className="w-full aspect-video bg-black rounded-[2rem] relative overflow-hidden group shadow-xl">
-                            <iframe
+                            <video
+                                ref={videoRef}
                                 className="w-full h-full object-cover"
-                                src="https://www.youtube.com/embed/vOdWFF_1U2A"
-                                title="YouTube video player"
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowFullScreen
-                            ></iframe>
+                                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                                controls
+                                controlsList="nodownload"
+                                onEnded={handleVideoEnded}
+                            >
+                                Your browser does not support the video tag.
+                            </video>
                         </div>
 
                         {/* Actions Row */}
@@ -3371,18 +3435,25 @@ w-10 h-10 md: w-12 md: h-12 rounded-full flex items-center justify-center text-l
                         {/* Info Card */}
                         <div className="glass-panel rounded-[2rem] p-8 space-y-8">
                             <div>
-                                <h3 className="text-sm font-bold text-[#1A1A1A] mb-1">Section</h3>
+                                <h3 className="text-sm font-bold text-[#1A1A1A] mb-1">Chapter</h3>
                                 <div className="text-4xl font-bold text-[#1A1A1A]">{currentStep.toString().padStart(2, '0')}</div>
                             </div>
 
                             <div>
-                                <h4 className="text-lg font-medium text-[#1A1A1A] mb-2">Section {currentStep}</h4>
+                                <h4 className="text-lg font-medium text-[#1A1A1A] mb-2">{currentChapter?.title || `Chapter ${currentStep}`}</h4>
                                 <div className="h-px bg-gray-200 w-full"></div>
                             </div>
 
                             <div className="space-y-3 text-[#1A1A1A] text-sm leading-relaxed">
-                                <p>This section covers the fundamentals and key techniques. Follow along with the video to learn step by step.</p>
+                                <p>{currentChapter?.description || 'This chapter covers the fundamentals and key techniques. Follow along with the video to learn step by step.'}</p>
                             </div>
+
+                            {/* 视频完成提示 */}
+                            {videoCompleted && (
+                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-green-700 text-sm font-medium">✅ Chapter completed! Next chapter unlocked.</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Quiz Card */}
@@ -3687,7 +3758,7 @@ const MyCoursesView: React.FC<MyCoursesProps> = ({
                                             setFilterStatus('All');
                                             setEnrolledSearchQuery('');
                                         }}
-                                        className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                        className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                     >
                                         <RotateCcw size={16} />
                                         Reset
@@ -3843,7 +3914,7 @@ const MyCoursesView: React.FC<MyCoursesProps> = ({
                                     <input
                                         type="text"
                                         placeholder="Search ..."
-                                        className="w-full h-12 pl-4 pr-10 rounded-xl border border-white/60 bg-white/60 backdrop-blur-md focus:outline-none focus:border-[#FF8C66] focus:ring-4 focus:ring-[#FF8C66]/10 transition-all"
+                                        className="w-full h-10 pl-4 pr-10 rounded-xl border border-white/60 bg-white/60 backdrop-blur-md focus:outline-none focus:border-[#FF8C66] focus:ring-4 focus:ring-[#FF8C66]/10 transition-all"
                                         value={createdSearchQuery}
                                         onChange={(e) => setCreatedSearchQuery(e.target.value)}
                                     />
@@ -3852,7 +3923,7 @@ const MyCoursesView: React.FC<MyCoursesProps> = ({
                                 <div className="flex items-center gap-2">
                                     <div className="relative">
                                         <select
-                                            className="h-12 pl-4 pr-10 appearance-none bg-white/60 border border-white/60 backdrop-blur-md rounded-lg text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20"
+                                            className="h-10 pl-4 pr-10 appearance-none bg-white/60 border border-white/60 backdrop-blur-md rounded-lg text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20"
                                             value={createdFilterStatus}
                                             onChange={(e) => setCreatedFilterStatus(e.target.value)}
                                         >
@@ -3868,7 +3939,7 @@ const MyCoursesView: React.FC<MyCoursesProps> = ({
                                                 setCreatedFilterStatus('All');
                                                 setCreatedSearchQuery('');
                                             }}
-                                            className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                            className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                         >
                                             <RotateCcw size={16} />
                                             Reset
@@ -4023,7 +4094,7 @@ const MyCoursesView: React.FC<MyCoursesProps> = ({
                                                     setFilterStatus('All');
                                                     setEnrolledSearchQuery('');
                                                 }}
-                                                className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                                className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                             >
                                                 <RotateCcw size={16} />
                                                 Reset
@@ -4209,8 +4280,11 @@ const MyCoursesView: React.FC<MyCoursesProps> = ({
 };
 
 
-const LoginView: React.FC<ViewProps & { setSelectedRole: (role: UserRole) => void }> = ({ setCurrentView, setSelectedRole }) => {
+const LoginView: React.FC<ViewProps & { setSelectedRole: (role: UserRole) => void; setCurrentUser?: (user: any) => void }> = ({ setCurrentView, setSelectedRole, setCurrentUser }) => {
     const [showPassword, setShowPassword] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
     return (
         <div className="min-h-screen flex flex-col font-sans">
@@ -4229,7 +4303,15 @@ const LoginView: React.FC<ViewProps & { setSelectedRole: (role: UserRole) => voi
                     <div className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700">Email or mobile phone number</label>
-                            <input type="text" className="w-full h-14 px-4 bg-white/60 border border-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 focus:border-[#FF8C66] transition-all" />
+                            <input
+                                type="text"
+                                value={email}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    setError('');
+                                }}
+                                className="w-full h-14 px-4 bg-white/60 border border-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 focus:border-[#FF8C66] transition-all"
+                            />
                         </div>
 
                         <div className="space-y-2">
@@ -4253,15 +4335,67 @@ const LoginView: React.FC<ViewProps & { setSelectedRole: (role: UserRole) => voi
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        setError('');
+                                    }}
                                     className="w-full h-14 px-4 bg-white/60 border border-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C66]/20 focus:border-[#FF8C66] transition-all"
                                 />
                             </div>
                         </div>
 
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                                {error}
+                            </div>
+                        )}
+
                         <button
                             onClick={() => {
-                                setSelectedRole(UserRole.LEARNER);
-                                setCurrentView(ViewState.DASHBOARD);
+                                // 验证输入
+                                if (!email || !password) {
+                                    setError('Please enter both email and password');
+                                    return;
+                                }
+
+                                // 在数据库中查找用户
+                                const user = INITIAL_USERS.find(
+                                    u => u.email.toLowerCase() === email.toLowerCase() && u.password_hash === password
+                                );
+
+                                if (!user) {
+                                    setError('Invalid email or password');
+                                    return;
+                                }
+
+                                // 检查用户状态
+                                if (user.status === UserStatus.BANNED) {
+                                    setError('This account has been banned');
+                                    return;
+                                }
+
+                                // 登录成功,设置当前用户并根据用户角色跳转
+                                if (setCurrentUser) {
+                                    setCurrentUser({
+                                        id: user.user_id,
+                                        name: user.username,
+                                        role: user.role === 'LEARNER' ? UserRole.LEARNER :
+                                            user.role === 'SHARER' ? UserRole.SHARER :
+                                                user.role === 'ADMIN' ? UserRole.ADMIN : UserRole.GUEST
+                                    });
+                                }
+
+                                if (user.role === UserRole.ADMIN) {
+                                    setSelectedRole(UserRole.ADMIN);
+                                    setCurrentView(ViewState.ADMIN_USER_MANAGEMENT);
+                                } else if (user.role === UserRole.SHARER) {
+                                    setSelectedRole(UserRole.SHARER);
+                                    setCurrentView(ViewState.DASHBOARD);
+                                } else {
+                                    setSelectedRole(UserRole.LEARNER);
+                                    setCurrentView(ViewState.DASHBOARD);
+                                }
                             }}
                             className="w-full h-14 bg-gradient-to-r from-[#FF8C66] to-[#FF6B4A] text-white rounded-xl font-bold text-base hover:shadow-orange-500/30 transition-all shadow-lg shadow-orange-500/20 mt-2"
                         >
@@ -4277,18 +4411,6 @@ const LoginView: React.FC<ViewProps & { setSelectedRole: (role: UserRole) => voi
                             <button className="text-sm font-bold text-gray-500 hover:text-[#1A1A1A]">Forget your password</button>
                         </div>
                     </div>
-                </div>
-
-                <div className="mb-8">
-                    <button
-                        onClick={() => {
-                            setSelectedRole(UserRole.ADMIN);
-                            setCurrentView(ViewState.ADMIN_USER_MANAGEMENT);
-                        }}
-                        className="text-sm font-medium text-gray-600 hover:text-[#FF8C66] transition-colors"
-                    >
-                        Login as Admin
-                    </button>
                 </div>
 
                 <div className="w-full max-w-[600px] flex items-center gap-4 mb-8">
@@ -4566,10 +4688,11 @@ const RegisterView: React.FC<RegisterProps> = ({ setCurrentView, selectedRole, s
 
 const DashboardShell: React.FC<AuthenticatedViewProps & {
     allCourses: typeof INITIAL_ALL_COURSES;
-    onSelectCourse: (course: any) => void;
+    onJoinCourse: (course: any) => void;
     myCoursesSubpage: string;
     setMyCoursesSubpage: (subpage: string) => void;
-}> = ({ setCurrentView, selectedRole, allCourses, onSelectCourse, myCoursesSubpage, setMyCoursesSubpage }) => {
+    enrolledCourses: Enrollment[];
+}> = ({ setCurrentView, selectedRole, allCourses, onJoinCourse, myCoursesSubpage, setMyCoursesSubpage, enrolledCourses }) => {
     const [showRoleInfo, setShowRoleInfo] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCuisine, setSelectedCuisine] = useState("");
@@ -4586,11 +4709,33 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
 
     // Filter Logic
     const filteredCourses = allCourses.filter(course => {
+        // 搜索匹配
         const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // 菜系匹配
         const matchesCuisine = selectedCuisine === "" || course.cuisine === selectedCuisine;
-        // Mock data doesn't have difficulty or time, so we only filter by search and cuisine for now.
-        // We still maintain the state for Difficulty and Time to show UI interactivity.
-        return matchesSearch && matchesCuisine;
+
+        // 难度匹配
+        const matchesDifficulty = selectedDifficulty === "" || course.difficulty === parseInt(selectedDifficulty);
+
+        // 时间匹配
+        let matchesTime = true;
+        if (selectedTime !== "") {
+            const courseDate = new Date(course.created_date);
+            const now = new Date();
+            const diffTime = now.getTime() - courseDate.getTime();
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            if (selectedTime === "24h") {
+                matchesTime = diffDays <= 1;
+            } else if (selectedTime === "week") {
+                matchesTime = diffDays <= 7;
+            } else if (selectedTime === "month") {
+                matchesTime = diffDays <= 30;
+            }
+        }
+
+        return matchesSearch && matchesCuisine && matchesDifficulty && matchesTime;
     });
 
     return (
@@ -4606,7 +4751,7 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
                             placeholder="Search ..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-12 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
+                            className="w-full h-10 pl-4 pr-10 rounded-lg border border-white/60 bg-white/60 backdrop-blur-md text-[#1A1A1A] placeholder:text-gray-500 focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] shadow-sm"
                         />
                         <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1A1A1A]" size={20} />
                     </div>
@@ -4617,7 +4762,7 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
                             <select
                                 value={selectedCuisine}
                                 onChange={(e) => setSelectedCuisine(e.target.value)}
-                                className="w-full h-12 pl-4 pr-8 appearance-none bg-white/60 backdrop-blur-md border border-white/60 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-8 appearance-none bg-white/60 backdrop-blur-md border border-white/60 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] cursor-pointer shadow-sm"
                             >
                                 <option value="" disabled>Cuisine</option>
                                 <option value="Chinese">Chinese</option>
@@ -4632,7 +4777,7 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
                             <select
                                 value={selectedDifficulty}
                                 onChange={(e) => setSelectedDifficulty(e.target.value)}
-                                className="w-full h-12 pl-4 pr-8 appearance-none bg-white/60 backdrop-blur-md border border-white/60 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-8 appearance-none bg-white/60 backdrop-blur-md border border-white/60 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] cursor-pointer shadow-sm"
                             >
                                 <option value="" disabled>Difficulty</option>
                                 <option value="1">1 Star</option>
@@ -4648,7 +4793,7 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
                             <select
                                 value={selectedTime}
                                 onChange={(e) => setSelectedTime(e.target.value)}
-                                className="w-full h-12 pl-4 pr-8 appearance-none bg-white/60 backdrop-blur-md border border-white/60 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] cursor-pointer shadow-sm"
+                                className="w-full h-10 pl-4 pr-8 appearance-none bg-white/60 backdrop-blur-md border border-white/60 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-[#FF8C66] focus:ring-1 focus:ring-[#FF8C66] cursor-pointer shadow-sm"
                             >
                                 <option value="" disabled>Time Posted</option>
                                 <option value="24h">Past 24 hours</option>
@@ -4662,7 +4807,7 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
                         {(searchQuery || selectedCuisine || selectedDifficulty || selectedTime) && (
                             <button
                                 onClick={handleResetFilters}
-                                className="h-12 px-6 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                className="h-10 px-4 rounded-lg bg-red-50 border border-red-300 text-red-600 font-medium hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                             >
                                 <RotateCcw size={16} />
                                 Reset
@@ -4673,53 +4818,62 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
 
                 {/* Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {filteredCourses.map((course) => (
-                        <div key={course.id} className="glass-panel rounded-[2rem] p-4 flex flex-col hover:shadow-xl transition-shadow h-full">
-                            {/* Image Placeholder */}
-                            <div className="w-full aspect-[4/3] rounded-[1.5rem] bg-orange-50/50 mb-5 overflow-hidden relative flex items-center justify-center">
-                                {course.image ? (
-                                    <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="flex flex-col items-center gap-2 text-orange-200">
-                                        <ImageIcon size={48} strokeWidth={1.5} />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="px-2 pb-2 flex-1 flex flex-col">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-xl font-bold text-[#1A1A1A]">{course.title}</h3>
-                                    <button
-                                        className="px-6 py-2 rounded-full bg-gradient-to-r from-[#FF8C66] to-[#FF6B4A] text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all hover:-translate-y-0.5"
-                                        onClick={() => {
-                                            onSelectCourse(course);
-                                            setCurrentView(ViewState.COURSE_DETAIL);
-                                        }}
-                                    >
-                                        Join
-                                    </button>
+                    {filteredCourses.map((course) => {
+                        const isJoined = enrolledCourses.some(enrolled => enrolled.title === course.title);
+                        return (
+                            <div key={course.id} className="glass-panel rounded-[2rem] p-4 flex flex-col hover:shadow-xl transition-shadow h-full">
+                                {/* Image Placeholder */}
+                                <div className="w-full aspect-[4/3] rounded-[1.5rem] bg-orange-50/50 mb-5 overflow-hidden relative flex items-center justify-center">
+                                    {course.image ? (
+                                        <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 text-orange-200">
+                                            <ImageIcon size={48} strokeWidth={1.5} />
+                                        </div>
+                                    )}
                                 </div>
-                                <p className="text-gray-600 text-[15px] mb-8 leading-relaxed font-medium">
-                                    Please add your content here. Keep it short and simple. And smile :)
-                                </p>
 
-                                <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 rounded-full bg-orange-100"></div>
-                                        <span className="text-[#1A1A1A] text-sm font-medium">{course.cuisine}</span>
+                                <div className="px-2 pb-2 flex-1 flex flex-col">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-xl font-bold text-[#1A1A1A]">{course.title}</h3>
+                                        <button
+                                            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${isJoined
+                                                ? 'bg-gray-200 text-gray-500 cursor-default'
+                                                : 'bg-gradient-to-r from-[#FF8C66] to-[#FF6B4A] text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 hover:-translate-y-0.5'
+                                                }`}
+                                            disabled={isJoined}
+                                            onClick={() => {
+                                                if (!isJoined) {
+                                                    onJoinCourse(course);
+                                                    setCurrentView(ViewState.COURSE_DETAIL);
+                                                }
+                                            }}
+                                        >
+                                            {isJoined ? 'Joined' : 'Join'}
+                                        </button>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 rounded-full bg-orange-100"></div>
-                                        <span className="text-[#1A1A1A] text-sm font-medium">Difficulty</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 rounded-full bg-orange-100"></div>
-                                        <span className="text-[#1A1A1A] text-sm font-medium">Duration</span>
+                                    <p className="text-gray-600 text-[15px] mb-8 leading-relaxed font-medium line-clamp-2">
+                                        {course.description || 'No description available'}
+                                    </p>
+
+                                    <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 rounded-full bg-orange-100"></div>
+                                            <span className="text-[#1A1A1A] text-sm font-medium">{course.cuisine}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 rounded-full bg-orange-100"></div>
+                                            <span className="text-[#1A1A1A] text-sm font-medium">{course.difficulty} Star{course.difficulty > 1 ? 's' : ''}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 rounded-full bg-orange-100"></div>
+                                            <span className="text-[#1A1A1A] text-sm font-medium">{course.duration || 'N/A'}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Pagination */}
@@ -4733,99 +4887,103 @@ const DashboardShell: React.FC<AuthenticatedViewProps & {
                     <button className="px-6 py-2.5 rounded-full bg-white border border-[#FF8C66] text-[#FF8C66] font-bold hover:bg-[#FF8C66] hover:text-white transition-all shadow-md shadow-orange-500/20 flex items-center gap-2">
                         Next <ChevronRight size={18} />
                     </button>
-                </div>
+                </div >
 
                 {/* Create Course Button (Sharer Only) - Static at bottom right */}
-                {selectedRole === UserRole.SHARER && (
-                    <div className="flex justify-end mt-12">
-                        <button
-                            onClick={() => setCurrentView(ViewState.CREATE_COURSE)}
-                            className="flex items-center gap-2 bg-gradient-to-r from-[#FF8C66] to-[#FF6B4A] text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-orange-500/30 transition-all shadow-orange-500/20"
-                        >
-                            <Plus size={20} />
-                            Create Course
-                        </button>
-                    </div>
-                )}
-            </main>
+                {
+                    selectedRole === UserRole.SHARER && (
+                        <div className="flex justify-end mt-12">
+                            <button
+                                onClick={() => setCurrentView(ViewState.CREATE_COURSE)}
+                                className="flex items-center gap-2 bg-gradient-to-r from-[#FF8C66] to-[#FF6B4A] text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-orange-500/30 transition-all shadow-orange-500/20"
+                            >
+                                <Plus size={20} />
+                                Create Course
+                            </button>
+                        </div>
+                    )
+                }
+            </main >
 
 
             {/* Role Info Modal */}
-            {showRoleInfo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div
-                        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-                        onClick={() => setShowRoleInfo(false)}
-                    ></div>
-                    <div className="relative bg-white/80 backdrop-blur-xl border border-white/60 p-8 rounded-[2rem] shadow-2xl max-w-2xl w-full animate-in fade-in zoom-in-95 duration-200">
-                        <button
+            {
+                showRoleInfo && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div
+                            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
                             onClick={() => setShowRoleInfo(false)}
-                            className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                            <X size={24} />
-                        </button>
+                        ></div>
+                        <div className="relative bg-white/80 backdrop-blur-xl border border-white/60 p-8 rounded-[2rem] shadow-2xl max-w-2xl w-full animate-in fade-in zoom-in-95 duration-200">
+                            <button
+                                onClick={() => setShowRoleInfo(false)}
+                                className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X size={24} />
+                            </button>
 
-                        <h2 className="text-2xl font-bold text-[#1A1A1A] mb-8 text-center flex items-center justify-center gap-3">
-                            <span className="bg-orange-100 p-2 rounded-full text-[#FF8C66]">
-                                <Info size={24} />
-                            </span>
-                            Account Types
-                        </h2>
+                            <h2 className="text-2xl font-bold text-[#1A1A1A] mb-8 text-center flex items-center justify-center gap-3">
+                                <span className="bg-orange-100 p-2 rounded-full text-[#FF8C66]">
+                                    <Info size={24} />
+                                </span>
+                                Account Types
+                            </h2>
 
-                        <div className="grid md:grid-cols-2 gap-8">
-                            {/* Learner Column */}
-                            <div className="space-y-4">
-                                <div className="text-center mb-6">
-                                    <h3 className="text-lg font-bold text-[#1A1A1A]">Learner</h3>
-                                    <p className="text-sm text-gray-500">For students & enthusiasts</p>
+                            <div className="grid md:grid-cols-2 gap-8">
+                                {/* Learner Column */}
+                                <div className="space-y-4">
+                                    <div className="text-center mb-6">
+                                        <h3 className="text-lg font-bold text-[#1A1A1A]">Learner</h3>
+                                        <p className="text-sm text-gray-500">For students & enthusiasts</p>
+                                    </div>
+                                    <ul className="space-y-3">
+                                        {[
+                                            "Browse & Search Courses",
+                                            "Enroll in Courses",
+                                            "Track Learning Progress",
+                                            "Manage Personal Profile"
+                                        ].map((item, i) => (
+                                            <li key={i} className="flex items-center gap-3 text-gray-700 text-sm font-medium">
+                                                <div className="min-w-[20px] h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                                    <Check size={12} strokeWidth={3} />
+                                                </div>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                                <ul className="space-y-3">
-                                    {[
-                                        "Browse & Search Courses",
-                                        "Enroll in Courses",
-                                        "Track Learning Progress",
-                                        "Manage Personal Profile"
-                                    ].map((item, i) => (
-                                        <li key={i} className="flex items-center gap-3 text-gray-700 text-sm font-medium">
-                                            <div className="min-w-[20px] h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                                <Check size={12} strokeWidth={3} />
-                                            </div>
-                                            {item}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
 
-                            {/* Sharer Column */}
-                            <div className="space-y-4 relative">
-                                <div className="absolute left-0 top-0 bottom-0 w-px bg-gray-200 -ml-4 hidden md:block"></div>
-                                <div className="text-center mb-6">
-                                    <h3 className="text-lg font-bold text-[#1A1A1A]">Sharer</h3>
-                                    <p className="text-sm text-gray-500">For creators & instructors</p>
+                                {/* Sharer Column */}
+                                <div className="space-y-4 relative">
+                                    <div className="absolute left-0 top-0 bottom-0 w-px bg-gray-200 -ml-4 hidden md:block"></div>
+                                    <div className="text-center mb-6">
+                                        <h3 className="text-lg font-bold text-[#1A1A1A]">Sharer</h3>
+                                        <p className="text-sm text-gray-500">For creators & instructors</p>
+                                    </div>
+                                    <ul className="space-y-3">
+                                        {[
+                                            "All Learner Features",
+                                            "Create & Publish Courses",
+                                            "View Advanced Analytics",
+                                            "Manage Content"
+                                        ].map((item, i) => (
+                                            <li key={i} className="flex items-center gap-3 text-gray-700 text-sm font-medium">
+                                                <div className="min-w-[20px] h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#FF8C66]">
+                                                    <Check size={12} strokeWidth={3} />
+                                                </div>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                                <ul className="space-y-3">
-                                    {[
-                                        "All Learner Features",
-                                        "Create & Publish Courses",
-                                        "View Advanced Analytics",
-                                        "Manage Content"
-                                    ].map((item, i) => (
-                                        <li key={i} className="flex items-center gap-3 text-gray-700 text-sm font-medium">
-                                            <div className="min-w-[20px] h-5 rounded-full bg-orange-100 flex items-center justify-center text-[#FF8C66]">
-                                                <Check size={12} strokeWidth={3} />
-                                            </div>
-                                            {item}
-                                        </li>
-                                    ))}
-                                </ul>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <Footer />
-        </div>
+        </div >
     );
 };
 
@@ -4835,8 +4993,9 @@ const App: React.FC = () => {
     const [currentView, setCurrentView] = useState<ViewState>(ViewState.LANDING);
     const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.LEARNER);
     const [editingCourse, setEditingCourse] = useState<any>(null);
-    const [selectedCourse, setSelectedCourse] = useState<any>(null);
+    const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
     const [comments, setComments] = useState(INITIAL_COMMENTS);
+    const [currentUser, setCurrentUser] = useState({ id: 1, name: 'Current User', role: UserRole.LEARNER }); // Initial dummy user
     const [myCoursesSubpage, setMyCoursesSubpage] = useState<string>('created');
 
     const handleAddComment = (newComment: any) => {
@@ -4844,8 +5003,8 @@ const App: React.FC = () => {
     };
 
     // --- Admin State ---
-    const [registrations, setRegistrations] = useState(INITIAL_SHARER_REGISTRATIONS);
-    const [sharerRequests, setSharerRequests] = useState(INITIAL_SHARER_REQUESTS);
+    const [registrations, setRegistrations] = useState(INITIAL_SHARER_REGISTRATIONS_DATA);
+    const [sharerRequests, setSharerRequests] = useState(INITIAL_SHARER_REQUESTS_DATA);
     const [users, setUsers] = useState(INITIAL_USER_CONTROL_DATA);
     const [reportedContent, setReportedContent] = useState(INITIAL_REPORTED_CONTENT_DATA);
 
@@ -4922,13 +5081,163 @@ const App: React.FC = () => {
 
     // --- Course State ---
     const [allCourses, setAllCourses] = useState(INITIAL_ALL_COURSES);
-    const [enrolledCourses, setEnrolledCourses] = useState(INITIAL_ENROLLED_COURSES);
+    const [enrolledCourses, setEnrolledCourses] = useState<typeof INITIAL_ENROLLED_COURSES>([]);  // 初始化为空数组
     const [createdCourses, setCreatedCourses] = useState(INITIAL_CREATED_COURSES);
+    const [chapterProgress, setChapterProgress] = useState<UserChapterProgress[]>(INITIAL_CHAPTER_PROGRESS);  // 章节进度状态
 
     // --- Course Handlers ---
+    // 处理课程加入逻辑
+    const handleJoinCourse = (course: any) => {
+        // 检查课程是否已经加入 (基于当前用户)
+        const alreadyEnrolled = enrolledCourses.some(c => c.title === course.title && c.userId === currentUser.id);
+
+        if (!alreadyEnrolled) {
+            // 创建新的注册记录
+            const newEnrollment = {
+                id: enrolledCourses.length + 1,
+                userId: currentUser.id, // 关联当前用户
+                title: course.title,
+                date: new Date().toISOString().split('T')[0],  // 当前日期
+                progress: 0,  // 初始进度为 0
+                status: 'In Progress'  // 初始状态
+            };
+
+            // 添加到已注册课程列表
+            setEnrolledCourses(prev => [...prev, newEnrollment]);
+
+            // ✅ 解锁第一章
+            const courseChapters = INITIAL_CHAPTERS.filter(ch => ch.course_id === course.id);
+            if (courseChapters.length > 0) {
+                const firstChapter = courseChapters.sort((a, b) => a.chapter_order - b.chapter_order)[0];
+                const newProgress: UserChapterProgress = {
+                    progress_id: chapterProgress.length + 1,
+                    user_id: currentUser.id,
+                    enrollment_id: newEnrollment.id,
+                    chapter_id: firstChapter.chapter_id,
+                    is_completed: false,
+                    completed_date: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                setChapterProgress(prev => [...prev, newProgress]);
+            }
+        }
+
+        // 设置选中的课程(用于课程详情页)
+        setSelectedCourse(course);
+    };
+
     const handleUnenroll = (courseId: number) => {
         setEnrolledCourses(prev => prev.filter(c => c.id !== courseId));
     };
+
+    // 检查章节是否解锁
+    const isChapterUnlocked = (chapterId: number, courseId: number): boolean => {
+        const courseChapters = INITIAL_CHAPTERS
+            .filter(ch => ch.course_id === courseId)
+            .sort((a, b) => a.chapter_order - b.chapter_order);
+
+        const currentChapter = courseChapters.find(ch => ch.chapter_id === chapterId);
+        if (!currentChapter) return false;
+
+        // 第一章总是解锁
+        if (currentChapter.chapter_order === 1) {
+            // 检查用户是否已加入课程
+            const enrollment = enrolledCourses.find(e => {
+                const course = allCourses.find(c => c.title === e.title);
+                return course?.id === courseId;
+            });
+            return !!enrollment;
+        }
+
+        // 检查前一章是否完成
+        const previousChapter = courseChapters.find(ch => ch.chapter_order === currentChapter.chapter_order - 1);
+        if (!previousChapter) return false;
+
+        const previousProgress = chapterProgress.find(
+            p => p.chapter_id === previousChapter.chapter_id && p.is_completed && p.user_id === currentUser.id
+        );
+
+        return !!previousProgress;
+    };
+
+    // 完成章节并解锁下一章
+    const handleCompleteChapter = (chapterId: number, courseId: number) => {
+        // 标记当前章节为完成 (仅针对当前用户)
+        setChapterProgress(prev => prev.map(p =>
+            p.chapter_id === chapterId && p.user_id === currentUser.id
+                ? { ...p, is_completed: true, completed_date: new Date().toISOString().split('T')[0], updated_at: new Date().toISOString() }
+                : p
+        ));
+
+        // 解锁下一章
+        const courseChapters = INITIAL_CHAPTERS
+            .filter(ch => ch.course_id === courseId)
+            .sort((a, b) => a.chapter_order - b.chapter_order);
+
+        const currentChapter = courseChapters.find(ch => ch.chapter_id === chapterId);
+        if (!currentChapter) return;
+
+        const nextChapter = courseChapters.find(ch => ch.chapter_order === currentChapter.chapter_order + 1);
+        if (nextChapter) {
+            // 检查下一章是否已经在进度中 (针对当前用户)
+            const nextChapterExists = chapterProgress.some(p => p.chapter_id === nextChapter.chapter_id && p.user_id === currentUser.id);
+            if (!nextChapterExists) {
+                const enrollment = enrolledCourses.find(e => {
+                    const course = allCourses.find(c => c.title === e.title);
+                    return course?.id === courseId && e.userId === currentUser.id;
+                });
+
+                if (enrollment) {
+                    const newProgress: UserChapterProgress = {
+                        progress_id: chapterProgress.length + 1,
+                        user_id: currentUser.id,
+                        enrollment_id: enrollment.id,
+                        chapter_id: nextChapter.chapter_id,
+                        is_completed: false,
+                        completed_date: null,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                    setChapterProgress(prev => [...prev, newProgress]);
+                }
+            }
+        }
+
+        // 更新课程总进度
+        updateCourseProgress(courseId);
+    };
+
+    // 计算并更新课程总进度
+    const updateCourseProgress = (courseId: number) => {
+        const enrollment = enrolledCourses.find(e => {
+            const course = allCourses.find(c => c.title === e.title);
+            return course?.id === courseId && e.userId === currentUser.id;
+        });
+        if (!enrollment) return;
+
+        // 获取课程的所有章节
+        const courseChapters = INITIAL_CHAPTERS.filter(ch => ch.course_id === courseId);
+        const totalChapters = courseChapters.length;
+
+        if (totalChapters === 0) return;
+
+        // 计算完成的章节数 (仅计算当前用户的进度)
+        const completedChapters = chapterProgress.filter(
+            p => courseChapters.some(ch => ch.chapter_id === p.chapter_id) && p.is_completed && p.user_id === currentUser.id
+        ).length;
+
+        // 计算进度百分比
+        const progress = Math.round((completedChapters / totalChapters) * 100);
+
+        // 更新注册记录的进度
+        setEnrolledCourses(prev => prev.map(e =>
+            e.id === enrollment.id
+                ? { ...e, progress, status: progress === 100 ? 'Completed' : 'In Progress' }
+                : e
+        ));
+    };
+
 
     const handleDeleteCourse = (courseId: number) => {
         setCreatedCourses(prev => prev.map(c =>
@@ -4965,7 +5274,7 @@ const App: React.FC = () => {
     const renderView = () => {
         switch (currentView) {
             case ViewState.LOGIN:
-                return <LoginView setCurrentView={setCurrentView} setSelectedRole={setSelectedRole} />;
+                return <LoginView setCurrentView={setCurrentView} setSelectedRole={setSelectedRole} setCurrentUser={setCurrentUser} />;
             case ViewState.REGISTER:
                 return <RegisterView setCurrentView={setCurrentView} selectedRole={selectedRole} setSelectedRole={setSelectedRole} />;
             case ViewState.DASHBOARD:
@@ -4974,9 +5283,10 @@ const App: React.FC = () => {
                         setCurrentView={setCurrentView}
                         selectedRole={selectedRole}
                         allCourses={allCourses}
-                        onSelectCourse={setSelectedCourse}
+                        onJoinCourse={handleJoinCourse}  // 传递 handleJoinCourse
                         myCoursesSubpage={myCoursesSubpage}
                         setMyCoursesSubpage={setMyCoursesSubpage}
+                        enrolledCourses={enrolledCourses.filter(e => e.userId === currentUser.id)}
                     />
                 );
             case ViewState.MY_COURSES:
@@ -4985,7 +5295,7 @@ const App: React.FC = () => {
                         setCurrentView={setCurrentView}
                         selectedRole={selectedRole}
                         setEditingCourse={setEditingCourse}
-                        enrolledCourses={enrolledCourses}
+                        enrolledCourses={enrolledCourses.filter(e => e.userId === currentUser.id)}
                         createdCourses={createdCourses}
                         onUnenroll={handleUnenroll}
                         onDeleteCourse={handleDeleteCourse}
@@ -5004,6 +5314,9 @@ const App: React.FC = () => {
                         onAddComment={handleAddComment}
                         myCoursesSubpage={myCoursesSubpage}
                         setMyCoursesSubpage={setMyCoursesSubpage}
+                        isChapterUnlocked={isChapterUnlocked}
+                        handleCompleteChapter={handleCompleteChapter}
+                        chapterProgress={chapterProgress.filter(p => p.user_id === currentUser.id)}
                     />
                 );
             case ViewState.ABOUT:
