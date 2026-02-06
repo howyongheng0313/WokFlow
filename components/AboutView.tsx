@@ -101,14 +101,15 @@ const AboutView: React.FC<AboutViewProps> = ({ setCurrentView }) => {
                         The visionary minds reshaping the future of culinary education.
                     </motion.p>
 
-                    {/* Bouncing Arrow - Positioning fixed to avoid text overlap */}
+                    {/* Bouncing Arrow - Positioning relative to content to avoid overlap */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1, duration: 1 }}
-                        className="absolute bottom-[10vh] left-1/2 -translate-x-1/2 animate-bounce text-gray-400"
+                        className="mt-16 flex flex-col items-center gap-2 animate-bounce text-gray-400"
                     >
                         <ArrowDown size={32} />
+                        <span className="text-sm font-medium tracking-widest uppercase">Scroll Down</span>
                     </motion.div>
                 </div>
             </div>
