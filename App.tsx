@@ -19,6 +19,8 @@ import {
     INITIAL_PLATFORM_ANALYTICS,
     INITIAL_CHAPTERS,
     INITIAL_CHAPTER_PROGRESS,
+    INITIAL_QUESTIONS,
+    INITIAL_ANSWERS,
     MONTH_NAMES as IMPORTED_MONTH_NAMES,
     UserStatus,
     CourseStatus,
@@ -3108,6 +3110,7 @@ interface CourseDetailProps extends AuthenticatedViewProps {
     isChapterUnlocked?: (chapterId: number, courseId: number) => boolean;
     handleCompleteChapter?: (chapterId: number, courseId: number) => void;
     chapterProgress?: any[];
+    currentUser?: any;
 }
 
 const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string; setMyCoursesSubpage?: (subpage: string) => void }> = ({
@@ -3120,7 +3123,8 @@ const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string
     setMyCoursesSubpage,
     isChapterUnlocked,
     handleCompleteChapter,
-    chapterProgress
+    chapterProgress,
+    currentUser
 }) => {
     const [commentText, setCommentText] = useState('');
     const [isFollowing, setIsFollowing] = useState(false);
@@ -3129,81 +3133,103 @@ const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string
     const [reportReason, setReportReason] = useState('');
     const [videoCompleted, setVideoCompleted] = useState(false);
 
+    // Filter comments for this course
+    const courseComments = comments.filter(c => c.course_id === selectedCourse?.id);
+
+    // Calculate average rating
+    const averageRating = courseComments.length > 0
+        ? (courseComments.reduce((acc, curr) => acc + curr.rating, 0) / courseComments.length).toFixed(1)
+        : 'New';
+
+    const ratingCount = courseComments.length;
+
     // Quiz states
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [userAnswers, setUserAnswers] = useState<(number | null)[]>(new Array(10).fill(null));
 
-    // Mock quiz questions
-    const quizQuestions = [
+    // 获取当前课程的章节
+    const courseChapters = INITIAL_CHAPTERS
+        .filter(ch => ch.course_id === selectedCourse?.id)
+        .sort((a, b) => a.chapter_order - b.chapter_order);
+
+    const [currentStep, setCurrentStep] = useState(1);
+
+    // 获取当前章节
+    const currentChapter = courseChapters[currentStep - 1] || courseChapters[0];
+
+    // 视频引用
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    // 视频播放完成处理
+    const handleVideoEnded = () => {
+        if (currentChapter && handleCompleteChapter) {
+            console.log('Video completed! Unlocking next chapter...');
+            setVideoCompleted(true);
+            handleCompleteChapter(currentChapter.chapter_id, selectedCourse?.id);
+        }
+    };
+
+    // 章节切换时重置状态
+    useEffect(() => {
+        setVideoCompleted(false);
+        // 重置视频到开始位置
+        if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+            videoRef.current.load(); // 重新加载视频
+        }
+
+        // Reset Quiz
+        setCurrentQuestionIndex(0);
+        setSelectedAnswer(null);
+        setShowResult(false);
+        setUserAnswers(new Array(10).fill(null));
+    }, [currentStep]);
+
+    // Dynamic quiz questions
+    const dynamicQuizQuestions = INITIAL_QUESTIONS
+        .filter(q => q.chapter_id === currentChapter?.chapter_id)
+        .sort((a, b) => a.question_order - b.question_order);
+
+    const quizQuestions = dynamicQuizQuestions.length > 0 ? dynamicQuizQuestions.map(q => {
+        const answers = INITIAL_ANSWERS
+            .filter(a => a.question_id === q.question_id)
+            .sort((a, b) => a.answer_order - b.answer_order);
+
+        return {
+            question: q.question_text,
+            options: answers.map(a => a.answer_text),
+            correctAnswer: answers.findIndex(a => a.is_correct)
+        };
+    }) : [
         {
-            question: "Who is making the Web standards?",
-            options: ["The World Wide Web Consortium", "Microsoft", "Mozilla", "Google"],
-            correctAnswer: 0
-        },
-        {
-            question: "What does HTML stand for?",
-            options: ["Hyper Text Markup Language", "Home Tool Markup Language", "Hyperlinks and Text Markup Language", "Hyperlinking Text Marking Language"],
-            correctAnswer: 0
-        },
-        {
-            question: "Which HTML tag is used for a paragraph?",
-            options: ["<paragraph>", "<p>", "<pg>", "<para>"],
-            correctAnswer: 1
-        },
-        {
-            question: "What is CSS used for?",
-            options: ["Styling web pages", "Creating databases", "Programming logic", "Network security"],
-            correctAnswer: 0
-        },
-        {
-            question: "Which symbol is used for IDs in CSS?",
-            options: [".", "#", "@", "*"],
-            correctAnswer: 1
-        },
-        {
-            question: "What does DOM stand for?",
-            options: ["Document Object Model", "Data Object Management", "Digital Object Method", "Document Oriented Markup"],
-            correctAnswer: 0
-        },
-        {
-            question: "Which JavaScript method is used to select an element by ID?",
-            options: ["getElement()", "getElementById()", "selectElement()", "findById()"],
-            correctAnswer: 1
-        },
-        {
-            question: "What is the correct way to write a JavaScript array?",
-            options: ["var colors = 'red', 'green', 'blue'", "var colors = (1:'red', 2:'green', 3:'blue')", "var colors = ['red', 'green', 'blue']", "var colors = {1='red', 2='green', 3='blue'}"],
-            correctAnswer: 2
-        },
-        {
-            question: "How do you create a function in JavaScript?",
-            options: ["function myFunction()", "function:myFunction()", "function = myFunction()", "create function myFunction()"],
-            correctAnswer: 0
-        },
-        {
-            question: "Which operator is used to assign a value to a variable?",
-            options: ["*", "=", "-", "x"],
-            correctAnswer: 1
+            question: "No quiz available for this chapter.",
+            options: [],
+            correctAnswer: -1
         }
     ];
 
-    const currentQuestion = quizQuestions[currentQuestionIndex];
+    const currentQuestion = quizQuestions[currentQuestionIndex] || quizQuestions[0];
     const currentAnswer = userAnswers[currentQuestionIndex];
 
     const handleSendComment = () => {
         if (!commentText.trim()) return;
 
         const newComment = {
-            id: Date.now(),
-            user: 'You',
-            text: commentText,
-            rating: userRating || 5 // Default rating if user hasn't rated yet
+            comment_id: Date.now(),
+            course_id: selectedCourse?.id,
+            user_id: currentUser?.id || 1, // Fallback to ID 1 if undefined
+            comment_text: commentText,
+            rating: userRating || 5,
+            created_date: new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         };
 
         onAddComment(newComment);
         setCommentText('');
+        setUserRating(0); // Reset rating
     };
 
     const handleSubmitReport = () => {
@@ -3245,37 +3271,7 @@ const CourseDetailView: React.FC<CourseDetailProps & { myCoursesSubpage?: string
         setShowResult(!showResult);
     };
 
-    // 获取当前课程的章节
-    const courseChapters = INITIAL_CHAPTERS
-        .filter(ch => ch.course_id === selectedCourse?.id)
-        .sort((a, b) => a.chapter_order - b.chapter_order);
 
-    const [currentStep, setCurrentStep] = useState(1);
-
-    // 获取当前章节
-    const currentChapter = courseChapters[currentStep - 1] || courseChapters[0];
-
-    // 视频引用
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    // 视频播放完成处理
-    const handleVideoEnded = () => {
-        if (currentChapter && handleCompleteChapter) {
-            console.log('Video completed! Unlocking next chapter...');
-            setVideoCompleted(true);
-            handleCompleteChapter(currentChapter.chapter_id, selectedCourse?.id);
-        }
-    };
-
-    // 章节切换时重置状态
-    useEffect(() => {
-        setVideoCompleted(false);
-        // 重置视频到开始位置
-        if (videoRef.current) {
-            videoRef.current.currentTime = 0;
-            videoRef.current.load(); // 重新加载视频
-        }
-    }, [currentStep]);
 
     return (
         <div className="min-h-screen flex flex-col font-sans">
@@ -3404,29 +3400,53 @@ w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg 
 
                         {/* Comments List */}
                         <div className="space-y-8">
-                            {comments.map((comment) => (
-                                <div key={comment.id} className="flex gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                                        <User size={20} className="text-gray-400" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-4">
-                                            <span className="font-bold text-[#1A1A1A]">{comment.user}</span>
-                                            <div className="flex gap-0.5">
-                                                {[1, 2, 3, 4, 5].map(s => (
-                                                    <Star
-                                                        key={s}
-                                                        size={14}
-                                                        fill={s <= comment.rating ? "#FF8C66" : "none"}
-                                                        className={s <= comment.rating ? "text-[#FF8C66]" : "text-gray-300"}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <p className="text-gray-600 text-sm">{comment.text}</p>
-                                    </div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <h3 className="text-xl font-bold text-[#1A1A1A]">Comments ({ratingCount})</h3>
+                                <div className="flex items-center gap-2">
+                                    <Star size={20} className="text-[#FF8C66] fill-[#FF8C66]" />
+                                    <span className="text-xl font-bold text-[#1A1A1A]">{averageRating}</span>
                                 </div>
-                            ))}
+                            </div>
+
+                            {courseComments.map((comment) => {
+                                // Find user details
+                                const user = INITIAL_USERS.find(u => u.user_id === comment.user_id);
+                                const username = user ? user.username : 'Unknown User';
+                                // For current user or newly added comments that might not be in INITIAL_USERS yet but are in currentUser
+                                const displayUsername = (comment.user_id === currentUser?.id) ? currentUser?.name : username;
+
+                                return (
+                                    <div key={comment.comment_id} className="flex gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                                            <User size={20} className="text-gray-400" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-4">
+                                                <span className="font-bold text-[#1A1A1A]">{displayUsername}</span>
+                                                <div className="flex gap-0.5">
+                                                    {[1, 2, 3, 4, 5].map(s => (
+                                                        <Star
+                                                            key={s}
+                                                            size={14}
+                                                            fill={s <= comment.rating ? "#FF8C66" : "none"}
+                                                            className={s <= comment.rating ? "text-[#FF8C66]" : "text-gray-300"}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="text-sm text-gray-400">{comment.created_date}</span>
+                                            </div>
+                                            <p className="text-gray-600 leading-relaxed">{comment.comment_text}</p>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+
+                            {courseComments.length === 0 && (
+                                <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-2xl">
+                                    <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
+                                    <p>No comments yet. Be the first to share your thoughts!</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -5317,6 +5337,7 @@ const App: React.FC = () => {
                         isChapterUnlocked={isChapterUnlocked}
                         handleCompleteChapter={handleCompleteChapter}
                         chapterProgress={chapterProgress.filter(p => p.user_id === currentUser.id)}
+                        currentUser={currentUser}
                     />
                 );
             case ViewState.ABOUT:

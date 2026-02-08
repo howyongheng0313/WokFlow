@@ -337,6 +337,62 @@ export const INITIAL_USERS: User[] = [
         joined_date: '2026-01-01',
         created_at: new Date('2026-01-01T08:00:00').toISOString(),
         updated_at: new Date().toISOString()
+    },
+    // Real Users for Comments
+    {
+        user_id: 4,
+        username: 'Sarah Chen',
+        email: 'sarah.chen@example.com',
+        password_hash: '12345',
+        role: UserRole.LEARNER,
+        status: UserStatus.ACTIVE,
+        joined_date: '2025-11-15',
+        created_at: new Date('2025-11-15T10:00:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        user_id: 5,
+        username: 'Emily Rodriguez',
+        email: 'emily.r@example.com',
+        password_hash: '12345',
+        role: UserRole.LEARNER,
+        status: UserStatus.ACTIVE,
+        joined_date: '2025-12-05',
+        created_at: new Date('2025-12-05T09:30:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        user_id: 6,
+        username: 'David Kim',
+        email: 'david.kim@example.com',
+        password_hash: '12345',
+        role: UserRole.LEARNER,
+        status: UserStatus.ACTIVE,
+        joined_date: '2026-01-10',
+        created_at: new Date('2026-01-10T14:20:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        user_id: 7,
+        username: 'Alex Nguyen',
+        email: 'alex.n@example.com',
+        password_hash: '12345',
+        role: UserRole.LEARNER,
+        status: UserStatus.ACTIVE,
+        joined_date: '2026-01-12',
+        created_at: new Date('2026-01-12T11:00:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        user_id: 8,
+        username: 'Maya Patel',
+        email: 'maya.p@example.com',
+        password_hash: '12345',
+        role: UserRole.LEARNER,
+        status: UserStatus.ACTIVE,
+        joined_date: '2026-01-20',
+        created_at: new Date('2026-01-20T16:45:00').toISOString(),
+        updated_at: new Date().toISOString()
     }
 ];
 
@@ -478,10 +534,11 @@ export const INITIAL_ENROLLMENTS: Enrollment[] = Array.from({ length: 8 }, (_, i
  * 使用真实的用户评论内容
  */
 export const INITIAL_COMMENTS: Comment[] = [
+    // Course 1: Yangzhou Fried Rice
     {
         comment_id: 1,
         course_id: 1,
-        user_id: 1, // sarah_chen
+        user_id: 4, // Sarah Chen
         comment_text: 'This course completely transformed my fried rice game! The wok hei technique is a game-changer. My family can\'t believe I made this at home!',
         rating: 5,
         created_date: '2025-12-20',
@@ -491,7 +548,7 @@ export const INITIAL_COMMENTS: Comment[] = [
     {
         comment_id: 2,
         course_id: 1,
-        user_id: 3, // emily_rodriguez
+        user_id: 5, // Emily Rodriguez
         comment_text: 'Great tutorial overall, but the pacing was a bit fast during the stir-frying section. Would love to see more close-up shots of the technique.',
         rating: 4,
         created_date: '2025-12-28',
@@ -499,9 +556,21 @@ export const INITIAL_COMMENTS: Comment[] = [
         updated_at: new Date().toISOString()
     },
     {
+        comment_id: 8,
+        course_id: 1,
+        user_id: 6, // David Kim
+        comment_text: 'The tips on egg preparation were exactly what I needed. My rice is finally golden and separate!',
+        rating: 5,
+        created_date: '2026-01-05',
+        created_at: new Date('2026-01-05T18:45:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 3: Carbonara
+    {
         comment_id: 3,
         course_id: 3,
-        user_id: 5, // david_kim
+        user_id: 6, // David Kim
         comment_text: 'Finally! An authentic carbonara recipe without cream. Chef Isabella explains the emulsification process so clearly. Perfetto!',
         rating: 5,
         created_date: '2026-01-15',
@@ -509,9 +578,21 @@ export const INITIAL_COMMENTS: Comment[] = [
         updated_at: new Date().toISOString()
     },
     {
+        comment_id: 9,
+        course_id: 3,
+        user_id: 7, // Alex Nguyen
+        comment_text: 'Delicious result, but be careful with the salt since different brands of pecorino can vary in saltiness.',
+        rating: 4,
+        created_date: '2026-01-20',
+        created_at: new Date('2026-01-20T12:30:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 5: Katsu Curry
+    {
         comment_id: 4,
         course_id: 5,
-        user_id: 7, // alex_nguyen
+        user_id: 7, // Alex Nguyen
         comment_text: 'The katsu curry turned out amazing! Making the roux from scratch takes time but it\'s so worth it. The depth of flavor is incredible.',
         rating: 5,
         created_date: '2026-01-18',
@@ -519,9 +600,21 @@ export const INITIAL_COMMENTS: Comment[] = [
         updated_at: new Date().toISOString()
     },
     {
+        comment_id: 10,
+        course_id: 5,
+        user_id: 8, // Maya Patel
+        comment_text: 'My pork cutlets came out super crispy. The double frying method mentioned in the Q&A section really helps.',
+        rating: 5,
+        created_date: '2026-02-02',
+        created_at: new Date('2026-02-02T19:10:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 6: Bibimbap
+    {
         comment_id: 5,
         course_id: 6,
-        user_id: 8, // maya_patel
+        user_id: 8, // Maya Patel
         comment_text: 'Love the bibimbap recipe! The gochujang sauce recipe alone is worth the course. Would appreciate more tips on getting the rice crispy in a regular pan.',
         rating: 4,
         created_date: '2026-01-25',
@@ -529,9 +622,21 @@ export const INITIAL_COMMENTS: Comment[] = [
         updated_at: new Date().toISOString()
     },
     {
+        comment_id: 11,
+        course_id: 6,
+        user_id: 4, // Sarah Chen
+        comment_text: 'Healthy, colorful, and delicious. A bit of work to chop all the veggies, but great for meal prep.',
+        rating: 5,
+        created_date: '2026-01-28',
+        created_at: new Date('2026-01-28T09:15:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 7: Dim Sum
+    {
         comment_id: 6,
         course_id: 7,
-        user_id: 1, // sarah_chen
+        user_id: 4, // Sarah Chen
         comment_text: 'The dim sum course is challenging but incredibly rewarding. My har gow came out restaurant-quality after a few practice rounds!',
         rating: 5,
         created_date: '2026-02-01',
@@ -539,13 +644,35 @@ export const INITIAL_COMMENTS: Comment[] = [
         updated_at: new Date().toISOString()
     },
     {
+        comment_id: 12,
+        course_id: 7,
+        user_id: 5, // Emily Rodriguez
+        comment_text: 'The dough recipe is spot on. I struggled a bit with the pleating, but the video slow-motion replay was very helpful.',
+        rating: 4,
+        created_date: '2026-02-05',
+        created_at: new Date('2026-02-05T14:20:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 8: Ramen
+    {
         comment_id: 7,
         course_id: 8,
-        user_id: 3, // emily_rodriguez
+        user_id: 5, // Emily Rodriguez
         comment_text: 'This ramen workshop is intensive but absolutely worth every minute. The tonkotsu broth recipe is pure gold. Chef Tanaka is a master!',
         rating: 5,
         created_date: '2026-02-03',
         created_at: new Date('2026-02-03T21:10:00').toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        comment_id: 13,
+        course_id: 8,
+        user_id: 6, // David Kim
+        comment_text: 'Best homemade ramen I have ever made. The chashu pork melts in your mouth.',
+        rating: 5,
+        created_date: '2026-02-06',
+        created_at: new Date('2026-02-06T11:50:00').toISOString(),
         updated_at: new Date().toISOString()
     }
 ];
@@ -1202,3 +1329,193 @@ export const INITIAL_CHAPTERS: Chapter[] = [
  * 初始为空,用户加入课程后动态创建
  */
 export const INITIAL_CHAPTER_PROGRESS: UserChapterProgress[] = [];
+
+/**
+ * 初始测验题目数据 (INITIAL_QUESTIONS)
+ */
+export const INITIAL_QUESTIONS: Question[] = [
+    // Course 1: Perfect Yangzhou Fried Rice Mastery - Chapter 1
+    {
+        question_id: 1,
+        chapter_id: 1,
+        question_text: "What is the key authentic characteristic of Yangzhou Fried Rice?",
+        question_order: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        question_id: 2,
+        chapter_id: 1,
+        question_text: "Which ingredient is NOT typically found in authentic Yangzhou Fried Rice?",
+        question_order: 2,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 3: Classic Italian Carbonara - Chapter 10
+    {
+        question_id: 3,
+        chapter_id: 10,
+        question_text: "What is the traditional meat used in Carbonara?",
+        question_order: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        question_id: 4,
+        chapter_id: 10,
+        question_text: "Which ingredient should NEVER be added to authentic Roman Carbonara?",
+        question_order: 2,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 5: Japanese Katsu Curry from Scratch - Chapter 16
+    {
+        question_id: 5,
+        chapter_id: 16,
+        question_text: "What gives Japanese curry its distinct thickness?",
+        question_order: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        question_id: 6,
+        chapter_id: 16,
+        question_text: "Which vegetable trifecta is standard in Japanese curry?",
+        question_order: 2,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 6: Traditional Korean Bibimbap - Chapter 21
+    {
+        question_id: 7,
+        chapter_id: 21,
+        question_text: "What does \"Bibimbap\" literally translate to?",
+        question_order: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        question_id: 8,
+        chapter_id: 21,
+        question_text: "What specific sauce is essential for Bibimbap?",
+        question_order: 2,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 7: Dim Sum Essentials: Dumplings & Buns - Chapter 25
+    {
+        question_id: 9,
+        chapter_id: 25,
+        question_text: "What is the primary starch used for Har Gow (Crystal Shrimp Dumpling) skins?",
+        question_order: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        question_id: 10,
+        chapter_id: 25,
+        question_text: "What is the philosophical meaning of \"Dim Sum\"?",
+        question_order: 2,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+
+    // Course 8: Homemade Ramen Workshop - Chapter 31
+    {
+        question_id: 11,
+        chapter_id: 31,
+        question_text: "What ingredient gives ramen noodles their yellow color and chewy texture?",
+        question_order: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    },
+    {
+        question_id: 12,
+        chapter_id: 31,
+        question_text: "Which of these is NOT a standard Ramen broth base type?",
+        question_order: 2,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }
+];
+
+/**
+ * 初始测验答案数据 (INITIAL_ANSWERS)
+ */
+export const INITIAL_ANSWERS: Answer[] = [
+    // Q1
+    { answer_id: 1, question_id: 1, answer_text: "Soy sauce heavy color", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 2, question_id: 1, answer_text: "Gold wrapped silver", is_correct: false, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 3, question_id: 1, answer_text: "Perfectly separated grains with distinct ingredients", is_correct: true, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 4, question_id: 1, answer_text: "Sticky and clumpy texture", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q2
+    { answer_id: 5, question_id: 2, answer_text: "Shrimp", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 6, question_id: 2, answer_text: "Sea Cucumber", is_correct: false, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 7, question_id: 2, answer_text: "Chili Paste", is_correct: true, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 8, question_id: 2, answer_text: "Ham", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q3
+    { answer_id: 9, question_id: 3, answer_text: "Bacon", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 10, question_id: 3, answer_text: "Pancetta", is_correct: false, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 11, question_id: 3, answer_text: "Guanciale", is_correct: true, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 12, question_id: 3, answer_text: "Prosciutto", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q4
+    { answer_id: 13, question_id: 4, answer_text: "Pecorino Romano", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 14, question_id: 4, answer_text: "Cream", is_correct: true, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 15, question_id: 4, answer_text: "Black Pepper", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 16, question_id: 4, answer_text: "Egg Yolks", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q5
+    { answer_id: 17, question_id: 5, answer_text: "Cornstarch slurry", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 18, question_id: 5, answer_text: "A roux made of flavor and oil", is_correct: true, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 19, question_id: 5, answer_text: "Heavy cream", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 20, question_id: 5, answer_text: "Mashed potatoes", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q6
+    { answer_id: 21, question_id: 6, answer_text: "Onions, Carrots, Potatoes", is_correct: true, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 22, question_id: 6, answer_text: "Peppers, Onions, Celery", is_correct: false, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 23, question_id: 6, answer_text: "Spinach, Broccoli, Peas", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 24, question_id: 6, answer_text: "Corn, Beans, Tomatoes", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q7
+    { answer_id: 25, question_id: 7, answer_text: "Mixed Rice", is_correct: true, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 26, question_id: 7, answer_text: "Fried Rice", is_correct: false, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 27, question_id: 7, answer_text: "Stone Bowl", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 28, question_id: 7, answer_text: "Spicy Rice", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q8
+    { answer_id: 29, question_id: 8, answer_text: "Soy Sauce", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 30, question_id: 8, answer_text: "Gochujang", is_correct: true, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 31, question_id: 8, answer_text: "Doenjang", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 32, question_id: 8, answer_text: "Fish Sauce", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q9
+    { answer_id: 33, question_id: 9, answer_text: "Wheat Flour", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 34, question_id: 9, answer_text: "Wheat Starch", is_correct: true, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 35, question_id: 9, answer_text: "Rice Flour", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 36, question_id: 9, answer_text: "Corn Starch", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q10
+    { answer_id: 37, question_id: 10, answer_text: "Eat until full", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 38, question_id: 10, answer_text: "Touch the heart", is_correct: true, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 39, question_id: 10, answer_text: "Small plates", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 40, question_id: 10, answer_text: "Morning tea", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q11
+    { answer_id: 41, question_id: 11, answer_text: "Eggs only", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 42, question_id: 11, answer_text: "Kansui (Alkaline salts)", is_correct: true, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 43, question_id: 11, answer_text: "Turmeric", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 44, question_id: 11, answer_text: "Saffron", is_correct: false, answer_order: 4, created_at: new Date().toISOString() },
+
+    // Q12
+    { answer_id: 45, question_id: 12, answer_text: "Shio (Salt)", is_correct: false, answer_order: 1, created_at: new Date().toISOString() },
+    { answer_id: 46, question_id: 12, answer_text: "Shoyu (Soy Sauce)", is_correct: false, answer_order: 2, created_at: new Date().toISOString() },
+    { answer_id: 47, question_id: 12, answer_text: "Miso", is_correct: false, answer_order: 3, created_at: new Date().toISOString() },
+    { answer_id: 48, question_id: 12, answer_text: "Wasabi", is_correct: true, answer_order: 4, created_at: new Date().toISOString() }
+];
